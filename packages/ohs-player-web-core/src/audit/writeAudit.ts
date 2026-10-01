@@ -3,6 +3,10 @@ import type { FhirClient } from '../client/FhirClient';
 export interface AuditParams {
   action: 'create' | 'update' | 'delete';
   resourceType: string;
+  /**
+   * Id of the audited resource. Without it, a `description` still records one entity with no
+   * `what`, for a summary event that touched many resources (e.g. a bulk import).
+   */
   resourceId?: string;
   description?: string;
   agentDisplay?: string;
@@ -20,6 +24,25 @@ const ACTION_CODE: Record<AuditParams['action'], 'C' | 'R' | 'U' | 'D'> = {
   update: 'U',
   delete: 'D',
 };
+
+function auditEntities(params: AuditParams): Record<string, unknown>[] {
+  const type = {
+    system: RESOURCE_TYPES_SYSTEM,
+    code: params.resourceType,
+    display: params.resourceType,
+  };
+  const description = params.description ? { description: params.description } : {};
+  if (params.resourceId) {
+    return [
+      {
+        what: { reference: `${params.resourceType}/${params.resourceId}` },
+        type,
+        ...description,
+      },
+    ];
+  }
+  return params.description ? [{ type, ...description }] : [];
+}
 
 /** Writes a FHIR `AuditEvent` for mutating operations (consumed by the activity feed). */
 export async function writeAuditEvent(
@@ -54,19 +77,7 @@ export async function writeAuditEvent(
       },
     ],
     source: { observer: { display: 'OHS Player Web' } },
-    entity: params.resourceId
-      ? [
-          {
-            what: { reference: `${params.resourceType}/${params.resourceId}` },
-            type: {
-              system: RESOURCE_TYPES_SYSTEM,
-              code: params.resourceType,
-              display: params.resourceType,
-            },
-            ...(params.description ? { description: params.description } : {}),
-          },
-        ]
-      : [],
+    entity: auditEntities(params),
   };
 
   return client.create(record);

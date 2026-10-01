@@ -200,7 +200,7 @@ Types: `BundleEntryMethod`, `TransactionBundleEntry`, `TransactionResponseBundle
 
 | Export | Description |
 | --- | --- |
-| `writeAuditEvent(client, params)` | `POST` a minimal FHIR `AuditEvent` via `client.create`. `AuditParams`: `action`, `resourceType`, optional `resourceId`, `description`, `agentDisplay`. Writes `agent[0].name` (the display) and types `entity[0]` with `RESOURCE_TYPES_SYSTEM`, so the `agent-name` and `entity-type` search parameters match portal events. |
+| `writeAuditEvent(client, params)` | `POST` a minimal FHIR `AuditEvent` via `client.create`. `AuditParams`: `action`, `resourceType`, optional `resourceId`, `description`, `agentDisplay`. Writes `agent[0].name` (the display) and types `entity[0]` with `RESOURCE_TYPES_SYSTEM`, so the `agent-name` and `entity-type` search parameters match portal events. With a `description` and no `resourceId`, it records one summary entity with no `what`, still typed with `resourceType` (e.g. a bulk import). |
 | `RESOURCE_TYPES_SYSTEM` | `'http://hl7.org/fhir/resource-types'`, the `entity.type` system `writeAuditEvent` writes; filter with `entity-type=<system>\|<Type>`. |
 | `activityItemFromAuditEvent(resource)` | Pure normaliser from an R4 `AuditEvent` (portal or gateway BALP written, input `unknown`) to `ActivityItem` `{ id, action?, resourceType, resourceId, description?, who, recorded? }`. Picks the `requestor` agent and the first entity whose reference ends in `Type/id`; `action` is `AuditAction` (`C`/`R`/`U`/`D`) or `undefined`. Used by the shell's activity feed and the reference app's audit log. |
 

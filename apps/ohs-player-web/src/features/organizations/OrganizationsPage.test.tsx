@@ -68,6 +68,8 @@ const searchBundles: Record<string, SearchBundle> = {
   },
 };
 
+const mockDenied = new Set<string>();
+
 const matching = (bundle: SearchBundle, status?: string): SearchBundle =>
   status ? { entry: bundle.entry.filter((e) => e.resource.status === status) } : bundle;
 
@@ -88,7 +90,13 @@ vi.mock('ohs-player-web-core', async (): Promise<object> => {
     useStatusBar: () => ({ notify: mockNotify }),
     writeAuditEvent: (...args: unknown[]) => mockWriteAuditEvent(...args) as unknown,
     useUpdateResource: () => ({ mutateAsync: vi.fn() }),
-    PermissionGuard: ({ children }: { children: React.ReactNode }) => children,
+    PermissionGuard: ({
+      permission,
+      children,
+    }: {
+      permission: string;
+      children: React.ReactNode;
+    }) => (mockDenied.has(permission) ? null : children),
     useSearch: (resourceType: string, params?: Record<string, string>) => ({
       data: matching(searchBundles[resourceType] ?? { entry: [] }, params?.status),
       isLoading: false,
@@ -116,6 +124,24 @@ describe('OrganizationsPage', () => {
     expect(await screen.findByText('Ministry of Health')).toBeInTheDocument();
     const result = await axe(container, { rules: { 'color-contrast': { enabled: false } } });
     expect(result.violations.filter((v) => v.impact === 'critical')).toEqual([]);
+  });
+
+  it('opens the organisations import drawer from a header action gated by bulk-import.manage', async () => {
+    renderPage();
+    expect(await screen.findByText('Ministry of Health')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'organizationsImport' }));
+    expect(screen.getByRole('dialog', { name: 'organizationsImportTitle' })).toBeInTheDocument();
+  });
+
+  it('hides the import action without bulk-import.manage', async () => {
+    mockDenied.add('bulk-import.manage');
+    renderPage();
+    expect(await screen.findByText('Ministry of Health')).toBeInTheDocument();
+
+    expect(screen.queryByRole('button', { name: 'organizationsImport' })).toBeNull();
+    expect(screen.getByRole('button', { name: /addOrganization/ })).toBeInTheDocument();
+    mockDenied.clear();
   });
 
   it('create with a selected location issues one transaction: POST org (urn) + PATCH the location to it', async () => {
