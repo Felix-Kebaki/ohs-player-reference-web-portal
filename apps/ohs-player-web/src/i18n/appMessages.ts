@@ -22,6 +22,9 @@ export const appMessageOverrides = {
   appTopbarTitle: 'Open Health Stack',
   configDocumentInvalid:
     'The configuration document is invalid, so the app is using its built-in settings.',
+  configUnknownMessageKeys:
+    'The configuration document overrides messages that nothing declares, so they have no effect',
+  configUnknownMessageKeySuggestion: '{{key}} (did you mean {{suggestion}}?)',
   globalSearch: 'Global Search',
   searchNoResults: 'No matches found.',
   notifications: 'Notifications',

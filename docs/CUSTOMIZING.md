@@ -113,11 +113,11 @@ Sign in as `manager-user`. Schedules is gone from the sidebar, the dashboard and
 `messages` overrides any message by key, and `locale` sets the locale for dates and numbers.
 
 ```json
-"messages": { "navUsers": "Staff", "schedulesTitle": "Rosters" },
+"messages": { "navUsers": "Staff", "navSchedules": "Rosters", "schedulesTitle": "Rosters" },
 "locale": "en-GB"
 ```
 
-The sidebar now says Staff, and the Schedules page is titled Rosters, with planning horizons formatted as British dates. Keys come from the library catalogue (`packages/ohs-player-web-core/src/i18n/locales/en.ts`), the app's messages and each extension's messages. A key that exists nowhere renders as the key itself, which makes a typo easy to spot. `locale` does not translate: supply translated `messages` for another language.
+The sidebar now says Staff and Rosters, and the Schedules page is titled Rosters, with planning horizons formatted as British dates. Each label has its own key, so renaming a screen everywhere means overriding each one. For Schedules, `navSchedules` is the sidebar entry, `schedulesTitle` the page heading, `schedulesKpi` the dashboard tile and `schedulesViewForUser` the row action, all listed in `apps/ohs-player-web-example/src/extensions/schedules/messages.ts`. A key can also label more than one place. `navUsers` names the Users sidebar entry, its option in Customize Widgets and its group in the global search results, so all three say Staff. Keys come from the library catalogue (`packages/ohs-player-web-core/src/i18n/locales/en.ts`), the app's messages and each extension's messages. A key a component asks for that exists nowhere renders as the key itself, which makes a missing message easy to spot. A misspelled key in `messages` is caught at startup instead. The schema accepts any key, because an extension's keys are only known once its manifest loads, so the host checks every key against the library, the app and each installed extension. A key none of them declares shows a warning toast on every load, naming the key and the closest declared one, for example `navSchedles (did you mean navSchedules?)`, and goes to the platform `onError` callback. `locale` does not translate: supply translated `messages` for another language.
 
 The import drawer shared by Users, Organisations and Locations reads `bulkImport*` keys. Before users and organisations import, the locations drawer read `locationsDropzone`, `locationsDropzoneHint`, `locationsUploadFile`, `locationsExpectedColumns`, `locationsTemplateHint`, `locationsDownloadTemplate`, `locationsStartImport`, `locationsImportProgress`, `locationsImportComplete`, `locationsImportPartial`, `locationsImportTotal`, `locationsImportProcessed`, `locationsImportFailed` and `locationsImportFailedNotice`. A document that overrides any of those should move the override to the matching `bulkImport*` key (`locationsDropzone` becomes `bulkImportDropzone`, `locationsImportTotal` becomes `bulkImportTotal`, and `locationsStartImport` becomes `bulkImportStart`).
 
@@ -133,6 +133,7 @@ Set `"order": "ten"` on a navigation entry and reload.
 - The error names the field and what was expected, and goes to the platform `onError` callback, which logs it to the console. The reference app also shows it as a toast in development.
 - The reference app refuses to build with an invalid document; `pnpm config:check` runs the same check on its own. The example app does not check at build time.
 - Delete `portal-config.json` and the app starts on its build-time values with no error.
+- A `messages` key that nothing declares does not make the document invalid. The rest of the document still applies, and the warning toast from step 6 names the key on every load until it is fixed, in development and production builds alike.
 
 Fix the document before moving on.
 
@@ -313,9 +314,9 @@ A widget's `load` imports a module whose default export is the tile. There are t
 | `main` | The wide column of the rows below | 10 to 40 |
 | `side` | The narrow column beside it | 10 to 40 |
 
-A `main` and a `side` widget with the same `order` share a row, and an `order` no built-in row uses starts a row of its own.
+A `main` and a `side` widget with the same `order` share a row, and an `order` no built-in row uses starts a row of its own. A widget with no partner at its order still gets a row, with the other column empty.
 
-The built-in KPI cards follow their sidebar entry's `requires`, so switching off a screen's flag, or denying its permission, hides its card as well. Each user chooses up to four of the remaining cards with Customize Widgets, and the choice is kept per user in that browser. Extension tiles in `kpi` always render after the chosen cards and do not count toward the four.
+The built-in KPI cards follow their sidebar entry's `requires`, so switching off a screen's flag, or denying its permission, hides its card as well. Each user chooses up to four of the remaining cards with Customize Widgets, and the choice is kept per user in that browser. Extension tiles in `kpi` are sorted in among the chosen cards by `order`, with the built-in cards at 10 to 40, so a tile at order 5 renders first and one at 50 renders last. They do not count toward the four.
 
 `PracticeKpiWidget.tsx` uses the shell's `StatCard` to match the built-in cards:
 
@@ -473,7 +474,7 @@ export const practiceExtension: PortalExtension = {
   widgets: [
     { id: 'kpi', region: 'kpi', order: 5, load: () => import('./PracticeKpiWidget'), requires },
     { id: 'main', region: 'main', order: 25, load: () => import('./PracticeMainWidget'), requires },
-    { id: 'side', region: 'side', order: 50, load: () => import('./PracticeSideWidget'), requires },
+    { id: 'side', region: 'side', order: 25, load: () => import('./PracticeSideWidget'), requires },
   ],
   slots: [{ id: 'open', slot: 'users.rowActions', order: 20, component: OpenPracticeAction }],
   questionnaires: { intake: intakeQuestionnaire },
@@ -524,8 +525,7 @@ Sign in as `admin-user`:
 | `/practice` | A list of practitioners; each id links to `/practice/<id>` |
 | `/practice/intake` | A form with a required Reason field and a Notes field |
 | Dashboard, top strip | Practitioners first, at order 5, before the built-in cards |
-| Dashboard, main column | A new row between the recent locations (20) and recent organizations (30) rows |
-| Dashboard, side column | A row of its own at the bottom, at order 50 |
+| Dashboard rows | A new row at order 25 between the recent locations (20) and recent organizations (30) rows, with the main widget on the left and the side widget on the right |
 | Users, row ⋮ menu | View schedules (10), then Open in practice (20) |
 | Sign in as `manager-user` | All of the above is hidden: `practice.view` only lists `admin` |
 | Document `"permissionMap": { "practice.view": ["admin", "care-team-manager"] }` | `manager-user` now sees it all |
